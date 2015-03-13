@@ -18,6 +18,8 @@ package kr.co.vcnc.haeinsa;
 import java.lang.reflect.Method;
 
 import org.apache.hadoop.hbase.client.HTableInterface;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 import org.hsqldb.TransactionManager;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
@@ -32,11 +34,22 @@ public class HaeinsaTestBase {
     private static HaeinsaTestingCluster CLUSTER;
     private static final ThreadLocal<TestingContext> CONTEXT = new ThreadLocal<>();
 
+    static { 
+      Logger.getLogger("org.apache").setLevel(Level.ERROR);
+      Logger.getLogger("org.mortbay").setLevel(Level.ERROR);
+      Logger.getLogger("BlockStateChange").setLevel(Level.ERROR);
+    }
+    
     @BeforeClass
     public static void setUpHbase() throws Exception {
         CLUSTER = HaeinsaTestingCluster.getInstance();
     }
 
+    @BeforeMethod
+    public void startingTest(Method methd) { 
+      System.out.println("Running Test:" + methd.getName());
+    }
+    
     @BeforeMethod
     public void generateTableName(Method method) {
         final String className = method.getDeclaringClass().getName();
