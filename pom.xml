@@ -23,7 +23,7 @@
         <version>9</version>
     </parent>
 
-    <groupId>kr.co.vcnc.haeinsa</groupId>
+    <groupId>com.factual</groupId>
     <artifactId>haeinsa</artifactId>
     <version>1.0.5-SNAPSHOT</version>
     <packaging>jar</packaging>
