@@ -217,7 +217,7 @@ public class HaeinsaTablePool implements Closeable {
         String tableName = Bytes.toString(table.getTableName());
         if (tables.size(tableName) >= maxSize) {
             // release table instance since we're not reusing it
-            this.tables.remove(tableName, table);
+            this.tables.removeValue(tableName, table);
             release(table);
             return;
         }
