@@ -8,8 +8,8 @@ import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.HTableInterfaceFactory;
 
 public class NeutronicUnstableRowTrackingHaeinsaTableFactory implements HaeinsaTableIfaceFactory {
-  private static final String UNSTABLE_ROWS_TRACKING_TABLE_NAME = "neutronic.haeinsa.unstable.rows.tracking.table.name";
-  private static final String UNSTABLE_ROWS_TRACKING_TABLE_NAME_DEFAULT = "unstable_rows";
+  public static final String UNSTABLE_ROWS_TRACKING_TABLE_NAME = "neutronic.haeinsa.unstable.rows.tracking.table.name";
+  public static final String UNSTABLE_ROWS_TRACKING_TABLE_NAME_DEFAULT = "unstable_rows";
   private final HTableInterfaceFactory tableInterfaceFactory;
   private final List<String> tablesToTrackUnstableRows;
 
