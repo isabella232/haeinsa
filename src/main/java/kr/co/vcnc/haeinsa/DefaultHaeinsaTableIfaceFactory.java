@@ -33,10 +33,7 @@ public class DefaultHaeinsaTableIfaceFactory implements HaeinsaTableIfaceFactory
 
     @Override
     public HaeinsaTableIface createHaeinsaTableIface(Configuration config, byte[] tableName) {
-        //todo: should we be hijacking the main table factory? Or should we create our own? Creating our own requires a lot of code changes in Neutronic project...
-        HTableInterface hTableInterface = tableInterfaceFactory.createHTableInterface(config, tableName);
-        HTableInterface unstableRowTable = tableInterfaceFactory.createHTableInterface(config, "unstable_rows".getBytes()); //todo: should this be hard coded like this?
-        return new UnstableRowTrackingHaeinsaTable(new HaeinsaTable(hTableInterface), unstableRowTable);
+        return new HaeinsaTable(tableInterfaceFactory.createHTableInterface(config, tableName));
     }
 
     @Override
