@@ -342,6 +342,42 @@
             </build>
         </profile>
         <profile>
+            <id>unix</id>
+            <activation>
+                <os>
+                    <family>unix</family>
+                </os>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.thrift.tools</groupId>
+                        <artifactId>maven-thrift-plugin</artifactId>
+                        <version>0.1.11</version>
+                        <configuration>
+                            <thriftExecutable>${project.basedir}/tools/linux/thrift</thriftExecutable>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>thrift-sources</id>
+                                <phase>generate-sources</phase>
+                                <goals>
+                                    <goal>compile</goal>
+                                </goals>
+                            </execution>
+                            <execution>
+                                <id>thrift-test-sources</id>
+                                <phase>generate-test-sources</phase>
+                                <goals>
+                                    <goal>testCompile</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
             <id>windows</id>
             <activation>
                 <os>
@@ -411,7 +447,7 @@
         <profile>
             <id>java8</id>
             <activation>
-                <jdk>1.8</jdk>								
+                <jdk>1.8</jdk>
             </activation>
             <build>
                 <plugins>
@@ -457,5 +493,5 @@
         <enabled>true</enabled>
       </releases>
     </repository>
-  </repositories>    
+  </repositories>
 </project>
