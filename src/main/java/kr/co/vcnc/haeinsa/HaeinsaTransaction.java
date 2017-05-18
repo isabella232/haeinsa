@@ -24,7 +24,6 @@ import kr.co.vcnc.haeinsa.HaeinsaTransactionLocal.HaeinsaTransactionLocals;
 import kr.co.vcnc.haeinsa.exception.ConflictException;
 import kr.co.vcnc.haeinsa.exception.RecoverableConflictException;
 import kr.co.vcnc.haeinsa.thrift.generated.TRowKey;
-import kr.co.vcnc.haeinsa.thrift.generated.TRowKeysSet;
 import kr.co.vcnc.haeinsa.thrift.generated.TRowLock;
 import kr.co.vcnc.haeinsa.thrift.generated.TRowLockState;
 
@@ -57,10 +56,10 @@ import com.google.common.hash.Hashing;
 public class HaeinsaTransaction {
     //************************START NEUTRONIC ADDITION******************
 
-    public final UUID uuid = UUID.randomUUID();
+    private final UUID uuid = UUID.randomUUID();
 
-    public TRowKeysSet getMutationRows() {
-        return new TRowKeysSet(txStates.getMutationRowStates().keySet());
+    public Set<TRowKey> getMutationRows() {
+        return txStates.getMutationRowStates().keySet();
     }
 
     public UUID getId() {
