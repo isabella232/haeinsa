@@ -38,11 +38,10 @@ import com.google.common.collect.Maps;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 
-/*
- * ################ START NEUTRONIC CHANGES #######################
- *  Class changed from 'package-private' to 'public' permission.
- * ################ END NEUTRONIC CHANGES #######################
- */
+/*************************START NEUTRONIC ADDITION*****************
+ * 1) Added getMutationRows() method
+ * 2) Added getId() method
+ *************************END NEUTRONIC ADDITION******************/
 
 /**
  * Representation of single transaction in Haeinsa.
@@ -56,6 +55,21 @@ import com.google.common.hash.Hashing;
  * One {@link HaeinsaTransaction} can't be used after calling {@link #commit()} or {@link #rollback()} is called.
  */
 public class HaeinsaTransaction {
+    //************************START NEUTRONIC ADDITION******************
+
+    public final UUID uuid = UUID.randomUUID();
+
+    public TRowKeysSet getMutationRows() {
+        return new TRowKeysSet(txStates.getMutationRowStates().keySet());
+    }
+
+    public UUID getId() {
+        return uuid;
+    }
+
+    //************************END NEUTRONIC ADDITION******************
+
+
     private static final Logger LOGGER = LoggerFactory.getLogger(HaeinsaTransaction.class);
     private final HaeinsaTransactionState txStates = new HaeinsaTransactionState();
 
@@ -96,14 +110,6 @@ public class HaeinsaTransaction {
     protected NavigableMap<TRowKey, HaeinsaRowTransaction> getMutationRowStates() {
         return txStates.getMutationRowStates();
     }
-
-    //************************START NEUTRONIC ADDITION******************
-
-    public TRowKeysSet getMutationRows() {
-        return new TRowKeysSet(txStates.getMutationRowStates().keySet());
-    }
-
-    //************************END NEUTRONIC ADDITION******************
 
     /**
      * Indicate whether this transaction has any changes.
@@ -169,17 +175,6 @@ public class HaeinsaTransaction {
     protected void setPrimary(TRowKey primary) {
         this.primary = primary;
     }
-
-    //************************START NEUTRONIC ADDITION******************
-
-    public final UUID uuid = UUID.randomUUID();
-
-    public UUID getId() {
-        return uuid;
-    }
-
-    //************************END NEUTRONIC ADDITION******************
-
 
     HaeinsaTransactionLocals getLocals() {
         if (txLocals == null) {

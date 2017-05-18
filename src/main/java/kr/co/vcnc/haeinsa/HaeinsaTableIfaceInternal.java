@@ -25,11 +25,9 @@ import kr.co.vcnc.haeinsa.thrift.generated.TRowLockState;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HTableInterface;
 
-/*
-    NEUTRONIC CHANGES:
-        1) package-private access modifier changed to public
- */
-
+/*************************START NEUTRONIC ADDITION*****************
+ * 1) Class package-private access modifier changed to public
+ *************************END NEUTRONIC ADDITION******************/
 
 /**
  * Extended interface from {@link HaeinsaTableIface} which defines private methods that are used to implement transaction.

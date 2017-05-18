@@ -21,10 +21,9 @@ import kr.co.vcnc.haeinsa.thrift.generated.TRowLock;
 
 import com.google.common.collect.Lists;
 
-/*
-    NEUTRONIC CHANGES:
-        1) package-private access modifier changed to public
- */
+/*************************START NEUTRONIC ADDITION*****************
+ * 1) Class package-private access modifier changed to public
+ *************************END NEUTRONIC ADDITION******************/
 
 /**
  * Contains Transaction information of single row. This information is only

@@ -24,11 +24,9 @@ import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.common.collect.Maps;
 
-/*
- * ################ START NEUTRONIC CHANGES #######################
- *  Class changed from 'package-private' to 'public' permission.
- * ################ END NEUTRONIC CHANGES #######################
- */
+/*************************START NEUTRONIC ADDITION*****************
+ * 1) Class package-private access modifier changed to public
+ *************************END NEUTRONIC ADDITION******************/
 
 /**
  * Contains Transaction information of single Table.
