@@ -25,7 +25,7 @@
 
     <groupId>com.factual</groupId>
     <artifactId>haeinsa</artifactId>
-    <version>1.0.5.4-factual</version>
+    <version>1.0.5.5-factual</version>
     <packaging>jar</packaging>
 
     <name>haeinsa</name>
@@ -57,8 +57,8 @@
     </scm>
 
     <properties>
-        <hbase.version>1.0.0-cdh5.6.1</hbase.version>
-        <hadoop.version>2.6.0-cdh5.6.1</hadoop.version>
+        <hbase.version>1.2.0-cdh5.13.0</hbase.version>
+        <hadoop.version>2.6.0-cdh5.13.0</hadoop.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     </properties>
