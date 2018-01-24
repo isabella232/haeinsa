@@ -647,7 +647,8 @@ public class HaeinsaTable implements HaeinsaTableIfaceInternal {
                 Delete delete = new Delete(row);
                 if (mutation.getRemove().getRemoveFamiliesSize() > 0) {
                     for (ByteBuffer removeFamily : mutation.getRemove().getRemoveFamilies()) {
-                        delete.deleteFamily(removeFamily.array(), mutationTimestamp);
+                        byte[] wrapper = ByteBufferUtils.getByteArray(removeFamily);
+                        delete.deleteFamily(wrapper, mutationTimestamp);
                     }
                 }
                 if (mutation.getRemove().getRemoveCellsSize() > 0) {
