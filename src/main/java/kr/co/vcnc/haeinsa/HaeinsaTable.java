@@ -539,7 +539,7 @@ public class HaeinsaTable implements HaeinsaTableIfaceInternal {
                     currentTx.recover(true);
                 }
             }
-            throw new ConflictException("this row is modified, checkSingleRow failed");
+            throw new ConflictException("this row is modified, checkSingleRow failed: " + new String(row));
         }
     }
 
