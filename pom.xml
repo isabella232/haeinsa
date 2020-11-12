@@ -25,7 +25,7 @@
 
     <groupId>com.factual</groupId>
     <artifactId>haeinsa</artifactId>
-    <version>1.0.5.8-factual</version>
+    <version>1.0.5.9-factual</version>
     <packaging>jar</packaging>
 
     <name>haeinsa</name>
@@ -87,18 +87,16 @@
         </developer>
     </developers>
 
-  <distributionManagement>
-    <repository>
-      <id>releases</id>
-      <name>Factual Releases</name>
-      <url>http://maven.corp.factual.com/nexus/content/repositories/releases</url>
-    </repository>
-    <snapshotRepository>
-      <id>snapshots</id>
-      <name>Factual Snapshots</name>
-      <url>http://maven.corp.factual.com/nexus/content/repositories/snapshots</url>
-    </snapshotRepository>
-  </distributionManagement>
+    <distributionManagement>
+        <repository>
+            <id>foursquare</id>
+            <url>https://foursquaredev.jfrog.io/foursquaredev/fsfactual-releases-local</url>
+        </repository>
+        <snapshotRepository>
+            <id>foursquare</id>
+            <url>https://foursquaredev.jfrog.io/foursquaredev/fsfactual-snapshots-local</url>
+        </snapshotRepository>
+    </distributionManagement>
 
     <dependencies>
         <dependency>

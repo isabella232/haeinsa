@@ -216,6 +216,7 @@ public class HaeinsaTable implements HaeinsaTableIfaceInternal {
         Scan hScan = new Scan(scan.getStartRow(), scan.getStopRow());
         hScan.setCaching(scan.getCaching());
         hScan.setCacheBlocks(scan.getCacheBlocks());
+        hScan.setReversed(scan.isReversed());
 
         for (Entry<byte[], NavigableSet<byte[]>> entry : scan.getFamilyMap().entrySet()) {
             if (entry.getValue() == null) {
@@ -233,21 +234,21 @@ public class HaeinsaTable implements HaeinsaTableIfaceInternal {
         HaeinsaTableTransaction tableState = tx.createOrGetTableState(getTableName());
         NavigableMap<byte[], HaeinsaRowTransaction> rows;
 
-        if (Bytes.equals(scan.getStartRow(), HConstants.EMPTY_START_ROW)) {
-            if (Bytes.equals(scan.getStopRow(), HConstants.EMPTY_END_ROW)) {
+        if (Bytes.equals(!scan.isReversed() ?  scan.getStartRow() : scan.getStopRow(), HConstants.EMPTY_START_ROW)) {
+            if (Bytes.equals(!scan.isReversed() ? scan.getStopRow() : scan.getStartRow(), HConstants.EMPTY_END_ROW)) {
                 // null, null
                 rows = tableState.getRowStates();
             } else {
                 // null, StopRow
-                rows = tableState.getRowStates().headMap(scan.getStopRow(), false);
+                rows = tableState.getRowStates().headMap(!scan.isReversed() ? scan.getStopRow() : scan.getStartRow(), false);
             }
         } else {
-            if (Bytes.equals(scan.getStopRow(), HConstants.EMPTY_END_ROW)) {
+            if (Bytes.equals(!scan.isReversed() ? scan.getStopRow() : scan.getStartRow(), HConstants.EMPTY_END_ROW)) {
                 // StartRow, null
-                rows = tableState.getRowStates().tailMap(scan.getStartRow(), true);
+                rows = tableState.getRowStates().tailMap(!scan.isReversed() ? scan.getStartRow() : scan.getStopRow(), true);
             } else {
                 // StartRow, StopRow
-                rows = tableState.getRowStates().subMap(scan.getStartRow(), true, scan.getStopRow(), false);
+                rows = tableState.getRowStates().subMap(!scan.isReversed() ? scan.getStartRow() : scan.getStopRow(), true, !scan.isReversed() ? scan.getStopRow() : scan.getStartRow(), false);
             }
         }
 
