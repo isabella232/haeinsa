@@ -15,18 +15,16 @@
  */
 package kr.co.vcnc.haeinsa;
 
-import java.io.IOException;
-import java.util.Map;
-import java.util.NavigableSet;
-import java.util.TreeMap;
-import java.util.TreeSet;
-
+import com.google.common.collect.Maps;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import com.google.common.collect.Maps;
+import java.io.IOException;
+import java.util.Map;
+import java.util.NavigableSet;
+import java.util.TreeSet;
 
 /**
  * HaeinsaScan is analogous to {@link Scan} class in HBase. HaeinsaScan can be
@@ -42,6 +40,7 @@ import com.google.common.collect.Maps;
 public class HaeinsaScan extends HaeinsaQuery {
     private byte[] startRow = HConstants.EMPTY_START_ROW;
     private byte[] stopRow = HConstants.EMPTY_END_ROW;
+    private boolean reversed = false;
     private int caching = -1;
 
     // { family -> qualifier }
@@ -89,6 +88,7 @@ public class HaeinsaScan extends HaeinsaQuery {
         stopRow = scan.getStopRow();
         caching = scan.getCaching();
         cacheBlocks = scan.getCacheBlocks();
+        reversed = scan.isReversed();
         Map<byte[], NavigableSet<byte[]>> fams = scan.getFamilyMap();
         for (Map.Entry<byte[], NavigableSet<byte[]>> entry : fams.entrySet()) {
             byte[] fam = entry.getKey();
@@ -236,5 +236,26 @@ public class HaeinsaScan extends HaeinsaQuery {
      */
     public int getCaching() {
         return this.caching;
+    }
+
+    /**
+     * Set whether this scan is a reversed one
+     * <p>
+     * This is false by default which means forward(normal) scan.
+     *
+     * @param reversed if true, scan will be backward order
+     * @return this
+     */
+    public HaeinsaScan setReversed(boolean reversed) {
+        this.reversed = reversed;
+        return this;
+    }
+
+    /**
+     * Get whether this scan is a reversed one.
+     * @return true if backward scan, false if forward(default) scan
+     */
+    public boolean isReversed() {
+        return reversed;
     }
 }

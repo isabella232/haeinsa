@@ -156,7 +156,7 @@ public class HaeinsaTable implements HaeinsaTableIfaceInternal {
         HaeinsaResult hResult = null;
         // Scanners at this moment is:
         // union( muationScanners from RowTransaction, Scanner of get)
-        try (ClientScanner scanner = new ClientScanner(tx, scanners, get.getFamilyMap(), lockInclusive)) {
+        try (ClientScanner scanner = new ClientScanner(tx, scanners, get.getFamilyMap(), lockInclusive, false)) {
             hResult = scanner.next();
         }
         if (hResult == null) {
@@ -216,6 +216,7 @@ public class HaeinsaTable implements HaeinsaTableIfaceInternal {
         Scan hScan = new Scan(scan.getStartRow(), scan.getStopRow());
         hScan.setCaching(scan.getCaching());
         hScan.setCacheBlocks(scan.getCacheBlocks());
+        hScan.setReversed(scan.isReversed());
 
         for (Entry<byte[], NavigableSet<byte[]>> entry : scan.getFamilyMap().entrySet()) {
             if (entry.getValue() == null) {
@@ -232,22 +233,25 @@ public class HaeinsaTable implements HaeinsaTableIfaceInternal {
 
         HaeinsaTableTransaction tableState = tx.createOrGetTableState(getTableName());
         NavigableMap<byte[], HaeinsaRowTransaction> rows;
-
-        if (Bytes.equals(scan.getStartRow(), HConstants.EMPTY_START_ROW)) {
-            if (Bytes.equals(scan.getStopRow(), HConstants.EMPTY_END_ROW)) {
+        byte[] lowerBound = !scan.isReversed() ?  scan.getStartRow() : scan.getStopRow();
+        byte[] upperBound = !scan.isReversed() ? scan.getStopRow() : scan.getStartRow();
+        boolean fromInclusive = !scan.isReversed();
+        boolean toInclusive = scan.isReversed();
+        if (Bytes.equals(lowerBound, HConstants.EMPTY_START_ROW)) {
+            if (Bytes.equals(upperBound, HConstants.EMPTY_END_ROW)) {
                 // null, null
                 rows = tableState.getRowStates();
             } else {
                 // null, StopRow
-                rows = tableState.getRowStates().headMap(scan.getStopRow(), false);
+                rows = tableState.getRowStates().headMap(upperBound, toInclusive);
             }
         } else {
-            if (Bytes.equals(scan.getStopRow(), HConstants.EMPTY_END_ROW)) {
+            if (Bytes.equals(upperBound, HConstants.EMPTY_END_ROW)) {
                 // StartRow, null
-                rows = tableState.getRowStates().tailMap(scan.getStartRow(), true);
+                rows = tableState.getRowStates().tailMap(lowerBound, fromInclusive);
             } else {
                 // StartRow, StopRow
-                rows = tableState.getRowStates().subMap(scan.getStartRow(), true, scan.getStopRow(), false);
+                rows = tableState.getRowStates().subMap(lowerBound, fromInclusive, upperBound, toInclusive);
             }
         }
 
@@ -260,7 +264,7 @@ public class HaeinsaTable implements HaeinsaTableIfaceInternal {
 
         // Scanners at this moment is:
         // union( muationScanners from all RowTransactions, Scanner of scan )
-        return new ClientScanner(tx, scanners, scan.getFamilyMap(), true);
+        return new ClientScanner(tx, scanners, scan.getFamilyMap(), true, scan.isReversed());
     }
 
     /**
@@ -334,7 +338,7 @@ public class HaeinsaTable implements HaeinsaTableIfaceInternal {
 
         // scanners at this moment is:
         // union( muationScanners from RowTransaction, Scanner of intraScan )
-        return new ClientScanner(tx, scanners, hScan.getFamilyMap(), intraScan, false);
+        return new ClientScanner(tx, scanners, hScan.getFamilyMap(), intraScan, false, false);
     }
 
     /**
@@ -840,8 +844,7 @@ public class HaeinsaTable implements HaeinsaTableIfaceInternal {
         private final HaeinsaTransaction tx;
         private final HaeinsaTableTransaction tableState;
         private boolean initialized;
-        private final NavigableSet<HaeinsaKeyValueScanner> scanners =
-                Sets.newTreeSet(HaeinsaKeyValueScanner.COMPARATOR);
+        private final NavigableSet<HaeinsaKeyValueScanner> scanners;
         private final List<HaeinsaKeyValueScanner> scannerList = Lists.newArrayList();
         // tracking delete of one specific row.
         private final HaeinsaDeleteTracker deleteTracker = new HaeinsaDeleteTracker();
@@ -866,8 +869,8 @@ public class HaeinsaTable implements HaeinsaTableIfaceInternal {
          * If not, should bring from {@link HaeinsaRowTransaction} or get from HBase directly.
          */
         public ClientScanner(HaeinsaTransaction tx, Iterable<HaeinsaKeyValueScanner> scanners,
-                             Map<byte[], NavigableSet<byte[]>> familyMap, boolean lockInclusive) {
-            this(tx, scanners, familyMap, null, lockInclusive);
+                             Map<byte[], NavigableSet<byte[]>> familyMap, boolean lockInclusive, boolean reversed) {
+            this(tx, scanners, familyMap, null, lockInclusive, reversed);
         }
 
         /**
@@ -876,7 +879,7 @@ public class HaeinsaTable implements HaeinsaTableIfaceInternal {
          * If not, should bring from {@link HaeinsaRowTransaction} or get from HBase directly.
          */
         public ClientScanner(HaeinsaTransaction tx, Iterable<HaeinsaKeyValueScanner> scanners,
-                             Map<byte[], NavigableSet<byte[]>> familyMap, HaeinsaIntraScan intraScan, boolean lockInclusive) {
+                             Map<byte[], NavigableSet<byte[]>> familyMap, HaeinsaIntraScan intraScan, boolean lockInclusive, boolean reversed) {
             this.tx = tx;
             this.tableState = tx.createOrGetTableState(getTableName());
             for (HaeinsaKeyValueScanner kvScanner : scanners) {
@@ -892,6 +895,7 @@ public class HaeinsaTable implements HaeinsaTableIfaceInternal {
             this.batch = intraScan.getBatch();
             this.lockInclusive = lockInclusive;
             this.familyMap = familyMap;
+            this.scanners = Sets.newTreeSet(!reversed ? HaeinsaKeyValueScanner.COMPARATOR : HaeinsaKeyValueScanner.REVERSE_COMPARATOR);
         }
 
         /**

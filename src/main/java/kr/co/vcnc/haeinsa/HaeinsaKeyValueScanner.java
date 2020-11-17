@@ -44,6 +44,16 @@ public interface HaeinsaKeyValueScanner {
         }
     };
 
+    Comparator<HaeinsaKeyValueScanner> REVERSE_COMPARATOR = new Comparator<HaeinsaKeyValueScanner>() {
+        @Override
+        public int compare(HaeinsaKeyValueScanner o1, HaeinsaKeyValueScanner o2) {
+            return ComparisonChain.start()
+                    .compare(o2.peek(), o1.peek(), HaeinsaKeyValue.COMPARATOR)
+                    .compare(o1.getSequenceID(), o2.getSequenceID())
+                    .result();
+        }
+    };
+
     /**
      * Look at the next KeyValue in this scanner, but do not iterate scanner.
      *

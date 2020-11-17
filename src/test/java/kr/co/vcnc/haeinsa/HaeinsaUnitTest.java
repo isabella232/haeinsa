@@ -29,6 +29,7 @@ import kr.co.vcnc.haeinsa.thrift.generated.TRowLockState;
 
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.testng.Assert;
 import org.testng.annotations.Test;
@@ -149,6 +150,253 @@ public class HaeinsaUnitTest extends HaeinsaTestBase {
         testTable.put(tx, testPut);
 
         scan = new HaeinsaScan();
+        scanner = testTable.getScanner(tx, scan);
+        result = scanner.next();
+        result2 = scanner.next();
+
+        Assert.assertNull(result2);
+        Assert.assertEquals(result.getValue(Bytes.toBytes("data"), Bytes.toBytes("phoneNumber")), Bytes.toBytes("010-9876-5432"));
+        scanner.close();
+
+        tx.commit();
+
+        tx = tm.begin();
+        get = new HaeinsaGet(Bytes.toBytes("ymkim"));
+        result = testTable.get(tx, get);
+        get2 = new HaeinsaGet(Bytes.toBytes("kjwoo"));
+        result2 = testTable.get(tx, get2);
+        tx.rollback();
+
+        Assert.assertEquals(result2.getValue(Bytes.toBytes("data"), Bytes.toBytes("phoneNumber")), Bytes.toBytes("010-9876-5432"));
+
+        Assert.assertTrue(result.isEmpty());
+        Assert.assertFalse(result2.isEmpty());
+
+        tx = tm.begin();
+        put = new HaeinsaPut(Bytes.toBytes("ymkim"));
+        put.add(Bytes.toBytes("data"), Bytes.toBytes("phoneNumber"), Bytes.toBytes("010-9876-5432"));
+        testTable.put(tx, put);
+        testPut = new HaeinsaPut(Bytes.toBytes("kjwoo"));
+        testPut.add(Bytes.toBytes("data"), Bytes.toBytes("phoneNumber"), Bytes.toBytes("010-1234-5678"));
+        testTable.put(tx, testPut);
+        tx.commit();
+
+        tx = tm.begin();
+        get = new HaeinsaGet(Bytes.toBytes("ymkim"));
+        result = testTable.get(tx, get);
+        get2 = new HaeinsaGet(Bytes.toBytes("kjwoo"));
+        result2 = testTable.get(tx, get2);
+        tx.rollback();
+
+        Assert.assertEquals(result2.getValue(Bytes.toBytes("data"), Bytes.toBytes("phoneNumber")), Bytes.toBytes("010-1234-5678"));
+        Assert.assertEquals(result.getValue(Bytes.toBytes("data"), Bytes.toBytes("phoneNumber")), Bytes.toBytes("010-9876-5432"));
+
+        tx = tm.begin();
+        delete1 = new HaeinsaDelete(Bytes.toBytes("ymkim"));
+        delete1.deleteFamily(Bytes.toBytes("data"));
+
+        delete2 = new HaeinsaDelete(Bytes.toBytes("kjwoo"));
+        delete2.deleteColumns(Bytes.toBytes("data"), Bytes.toBytes("phoneNumber"));
+
+        testTable.delete(tx, delete1);
+        testTable.delete(tx, delete2);
+
+        tx.commit();
+
+        // test Table-cross transaction & multi-Column transaction
+        tx = tm.begin();
+        put = new HaeinsaPut(Bytes.toBytes("previousTime"));
+        put.add(Bytes.toBytes("raw"), Bytes.toBytes("time-0"), Bytes.toBytes("log-value-1"));
+        logTable.put(tx, put);
+        put = new HaeinsaPut(Bytes.toBytes("row-0"));
+        put.add(Bytes.toBytes("data"), Bytes.toBytes("time-0"), Bytes.toBytes("data-value-1"));
+        put.add(Bytes.toBytes("meta"), Bytes.toBytes("time-0"), Bytes.toBytes("meta-value-1"));
+        testTable.put(tx, put);
+        tx.commit();
+
+        // check tx result
+        tx = tm.begin();
+        get = new HaeinsaGet(Bytes.toBytes("previousTime"));
+        get.addColumn(Bytes.toBytes("raw"), Bytes.toBytes("time-0"));
+        Assert.assertEquals(logTable.get(tx, get).getValue(Bytes.toBytes("raw"), Bytes.toBytes("time-0")), Bytes.toBytes("log-value-1"));
+        get = new HaeinsaGet(Bytes.toBytes("row-0"));
+        get.addColumn(Bytes.toBytes("data"), Bytes.toBytes("time-0"));
+        Assert.assertEquals(testTable.get(tx, get).getValue(Bytes.toBytes("data"), Bytes.toBytes("time-0")), Bytes.toBytes("data-value-1"));
+        get = new HaeinsaGet(Bytes.toBytes("row-0"));
+        get.addColumn(Bytes.toBytes("meta"), Bytes.toBytes("time-0"));
+        Assert.assertEquals(testTable.get(tx, get).getValue(Bytes.toBytes("meta"), Bytes.toBytes("time-0")), Bytes.toBytes("meta-value-1"));
+        tx.rollback();
+
+        // clear test - table
+        tx = tm.begin();
+        scan = new HaeinsaScan();
+        scanner = testTable.getScanner(tx, scan);
+        Iterator<HaeinsaResult> iter = scanner.iterator();
+        while (iter.hasNext()) {
+            result = iter.next();
+            for (HaeinsaKeyValue kv : result.list()) {
+                kv.getRow();
+                // delete specific kv - delete only if it's not lock family
+                HaeinsaDelete delete = new HaeinsaDelete(kv.getRow());
+                // should not return lock by scanner
+                Assert.assertFalse(Bytes.equals(kv.getFamily(), HaeinsaConstants.LOCK_FAMILY));
+                delete.deleteColumns(kv.getFamily(), kv.getQualifier());
+                testTable.delete(tx, delete);
+            }
+        }
+        tx.commit();
+        scanner.close();
+
+        // clear log - table
+        tx = tm.begin();
+        scan = new HaeinsaScan();
+        scanner = logTable.getScanner(tx, scan);
+        iter = scanner.iterator();
+        while (iter.hasNext()) {
+            result = iter.next();
+            for (HaeinsaKeyValue kv : result.list()) {
+                kv.getRow();
+                // delete specific kv - delete only if it's not lock family
+                HaeinsaDelete delete = new HaeinsaDelete(kv.getRow());
+                // should not return lock by scanner
+                Assert.assertFalse(Bytes.equals(kv.getFamily(), HaeinsaConstants.LOCK_FAMILY));
+                delete.deleteColumns(kv.getFamily(), kv.getQualifier());
+                logTable.delete(tx, delete);
+            }
+        }
+        tx.commit();
+        scanner.close();
+
+        // check whether table is clear - testTable
+        tx = tm.begin();
+        scan = new HaeinsaScan();
+        scanner = testTable.getScanner(tx, scan);
+        iter = scanner.iterator();
+        Assert.assertFalse(iter.hasNext());
+        tx.rollback();
+        scanner.close();
+        // check whether table is clear - logTable
+        tx = tm.begin();
+        scan = new HaeinsaScan();
+        scanner = logTable.getScanner(tx, scan);
+        iter = scanner.iterator();
+        Assert.assertFalse(iter.hasNext());
+        tx.rollback();
+        scanner.close();
+
+        testTable.close();
+        logTable.close();
+    }
+
+    @Test
+    public void testTransactionReverseScan() throws Exception {
+        final HaeinsaTransactionManager tm = context().getTransactionManager();
+        final HaeinsaTableIface testTable = context().getHaeinsaTableIface("test");
+        final HaeinsaTableIface logTable = context().getHaeinsaTableIface("log");
+
+        // Test 2 puts tx
+        HaeinsaTransaction tx = tm.begin();
+        HaeinsaPut put = new HaeinsaPut(Bytes.toBytes("ymkim"));
+        put.add(Bytes.toBytes("data"), Bytes.toBytes("phoneNumber"), Bytes.toBytes("010-1234-5678"));
+        testTable.put(tx, put);
+        HaeinsaPut testPut = new HaeinsaPut(Bytes.toBytes("kjwoo"));
+        testPut.add(Bytes.toBytes("data"), Bytes.toBytes("phoneNumber"), Bytes.toBytes("010-9876-5432"));
+        testTable.put(tx, testPut);
+        tx.commit();
+
+        tx = tm.begin();
+        HaeinsaGet get = new HaeinsaGet(Bytes.toBytes("ymkim"));
+        HaeinsaResult result = testTable.get(tx, get);
+        HaeinsaGet get2 = new HaeinsaGet(Bytes.toBytes("kjwoo"));
+        HaeinsaResult result2 = testTable.get(tx, get2);
+        tx.rollback();
+        Assert.assertEquals(result.getValue(Bytes.toBytes("data"), Bytes.toBytes("phoneNumber")), Bytes.toBytes("010-1234-5678"));
+        Assert.assertEquals(result2.getValue(Bytes.toBytes("data"), Bytes.toBytes("phoneNumber")), Bytes.toBytes("010-9876-5432"));
+
+        tx = tm.begin();
+        put = new HaeinsaPut(Bytes.toBytes("ymkim"));
+        put.add(Bytes.toBytes("data"), Bytes.toBytes("phoneNumber"), Bytes.toBytes("010-9876-5432"));
+        testTable.put(tx, put);
+        testPut = new HaeinsaPut(Bytes.toBytes("kjwoo"));
+        testPut.add(Bytes.toBytes("data"), Bytes.toBytes("phoneNumber"), Bytes.toBytes("010-1234-5678"));
+        testTable.put(tx, testPut);
+        tx.commit();
+
+        tx = tm.begin();
+        get = new HaeinsaGet(Bytes.toBytes("ymkim"));
+        result = testTable.get(tx, get);
+        get2 = new HaeinsaGet(Bytes.toBytes("kjwoo"));
+        result2 = testTable.get(tx, get2);
+        tx.rollback();
+
+        Assert.assertEquals(result2.getValue(Bytes.toBytes("data"), Bytes.toBytes("phoneNumber")), Bytes.toBytes("010-1234-5678"));
+        Assert.assertEquals(result.getValue(Bytes.toBytes("data"), Bytes.toBytes("phoneNumber")), Bytes.toBytes("010-9876-5432"));
+
+        tx = tm.begin();
+        HaeinsaScan scan = new HaeinsaScan().setReversed(true);
+        HaeinsaResultScanner scanner = testTable.getScanner(tx, scan);
+        result = scanner.next();
+        result2 = scanner.next();
+        HaeinsaResult result3 = scanner.next();
+
+        Assert.assertNull(result3);
+        Assert.assertEquals(result2.getValue(Bytes.toBytes("data"), Bytes.toBytes("phoneNumber")), Bytes.toBytes("010-1234-5678"));
+        Assert.assertEquals(result.getValue(Bytes.toBytes("data"), Bytes.toBytes("phoneNumber")), Bytes.toBytes("010-9876-5432"));
+        scanner.close();
+        tx.rollback();
+
+        tx = tm.begin();
+        put = new HaeinsaPut(Bytes.toBytes("ymkim"));
+        put.add(Bytes.toBytes("data"), Bytes.toBytes("phoneNumber"), Bytes.toBytes("010-1234-5678"));
+        testTable.put(tx, put);
+        testPut = new HaeinsaPut(Bytes.toBytes("kjwoo"));
+        testPut.add(Bytes.toBytes("data"), Bytes.toBytes("phoneNumber"), Bytes.toBytes("010-9876-5432"));
+        testTable.put(tx, testPut);
+        scan = new HaeinsaScan().setReversed(true);
+        scanner = testTable.getScanner(tx, scan);
+        result = scanner.next();
+        result2 = scanner.next();
+        result3 = scanner.next();
+
+        Assert.assertNull(result3);
+        Assert.assertEquals(result2.getValue(Bytes.toBytes("data"), Bytes.toBytes("phoneNumber")), Bytes.toBytes("010-9876-5432"));
+        Assert.assertEquals(result.getValue(Bytes.toBytes("data"), Bytes.toBytes("phoneNumber")), Bytes.toBytes("010-1234-5678"));
+        scanner.close();
+        tx.rollback();
+
+        tx = tm.begin();
+        put = new HaeinsaPut(Bytes.toBytes("ymkim"));
+        put.add(Bytes.toBytes("data"), Bytes.toBytes("phoneNumber"), Bytes.toBytes("010-1234-5678"));
+        testTable.put(tx, put);
+        testPut = new HaeinsaPut(Bytes.toBytes("kjwoo"));
+        testPut.add(Bytes.toBytes("data"), Bytes.toBytes("phoneNumber"), Bytes.toBytes("010-9876-5432"));
+        testTable.put(tx, testPut);
+        scan = new HaeinsaScan().setReversed(true);
+        scan.setStopRow(Bytes.toBytes("kjwoo"));
+        scan.setStartRow(Bytes.toBytes("ymkim"));
+        scanner = testTable.getScanner(tx, scan);
+        result = scanner.next();
+        result2 = scanner.next();
+        Assert.assertEquals(result.getValue(Bytes.toBytes("data"), Bytes.toBytes("phoneNumber")), Bytes.toBytes("010-1234-5678"));
+        Assert.assertNull(result2);
+        scanner.close();
+        tx.rollback();
+
+        tx = tm.begin();
+        HaeinsaDelete delete1 = new HaeinsaDelete(Bytes.toBytes("ymkim"));
+        delete1.deleteFamily(Bytes.toBytes("data"));
+
+        HaeinsaDelete delete2 = new HaeinsaDelete(Bytes.toBytes("kjwoo"));
+        delete2.deleteColumns(Bytes.toBytes("data"), Bytes.toBytes("phoneNumber"));
+
+        testTable.delete(tx, delete1);
+        testTable.delete(tx, delete2);
+
+        testPut = new HaeinsaPut(Bytes.toBytes("kjwoo"));
+        testPut.add(Bytes.toBytes("data"), Bytes.toBytes("phoneNumber"), Bytes.toBytes("010-9876-5432"));
+        testTable.put(tx, testPut);
+
+        scan = new HaeinsaScan().setReversed(true);
         scanner = testTable.getScanner(tx, scan);
         result = scanner.next();
         result2 = scanner.next();
