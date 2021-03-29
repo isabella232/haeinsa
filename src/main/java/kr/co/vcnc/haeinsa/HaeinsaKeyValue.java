@@ -53,6 +53,18 @@ public class HaeinsaKeyValue {
         }
     };
 
+    public static final Comparator<HaeinsaKeyValue> REVERSE_COMPARATOR = new Comparator<HaeinsaKeyValue>() {
+        @Override
+        public int compare(HaeinsaKeyValue o1, HaeinsaKeyValue o2) {
+            return ComparisonChain.start()
+                .compare(o2.getRow(), o1.getRow(), new NullableComparator<>(Bytes.BYTES_COMPARATOR))
+                .compare(o1.getFamily(), o2.getFamily(), new NullableComparator<>(Bytes.BYTES_COMPARATOR))
+                .compare(o1.getQualifier(), o2.getQualifier(), new NullableComparator<>(Bytes.BYTES_COMPARATOR))
+                .compare(o2.getType().getCode() & 0xFF, o1.getType().getCode() & 0xFF)
+                .result();
+        }
+    };
+
     private byte[] row;
     private byte[] family;
     private byte[] qualifier;
