@@ -1,22 +1,22 @@
 package kr.co.vcnc.haeinsa;
 
+import static org.apache.hadoop.hbase.KeyValue.Type.*;
+
+import java.util.*;
+import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
-import java.util.*;
-import java.util.stream.Collectors;
-
-import static org.apache.hadoop.hbase.KeyValue.Type.*;
-
 public class HaeinsaKeyValueTest {
-  public static final List<KeyValue.Type> TRAVERSAL_ORDER = Arrays.asList(Maximum, DeleteFamily, DeleteColumn, DeleteFamilyVersion, Delete, Put, Minimum);
+  public static final List<KeyValue.Type> TRAVERSAL_ORDER =
+      Arrays.asList(Maximum, DeleteFamily, DeleteColumn, DeleteFamilyVersion, Delete, Put, Minimum);
 
   @DataProvider(name = "comparator-provider")
   public Object[][] comparatorProvider() {
-    return new Object[][]{{HaeinsaKeyValue.COMPARATOR}, {HaeinsaKeyValue.REVERSE_COMPARATOR}};
+    return new Object[][] {{HaeinsaKeyValue.COMPARATOR}, {HaeinsaKeyValue.REVERSE_COMPARATOR}};
   }
 
   @Test(dataProvider = "comparator-provider")
@@ -31,7 +31,14 @@ public class HaeinsaKeyValueTest {
 
   public static List<HaeinsaKeyValue> sameRowFamilyQualifierAllTypes() {
     return TRAVERSAL_ORDER.stream()
-        .map(type -> new HaeinsaKeyValue(Bytes.toBytes("row"), Bytes.toBytes("family"), Bytes.toBytes("qualifier"), Bytes.toBytes(type.toString()), type))
+        .map(
+            type ->
+                new HaeinsaKeyValue(
+                    Bytes.toBytes("row"),
+                    Bytes.toBytes("family"),
+                    Bytes.toBytes("qualifier"),
+                    Bytes.toBytes(type.toString()),
+                    type))
         .collect(Collectors.toList());
   }
 
