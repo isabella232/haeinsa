@@ -22,10 +22,12 @@ import java.util.List;
 
 import kr.co.vcnc.haeinsa.thrift.generated.TRowLock;
 
+import lombok.SneakyThrows;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.client.HTableFactory;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.PoolMap;
 import org.apache.hadoop.hbase.util.PoolMap.PoolType;
@@ -41,6 +43,7 @@ public class HaeinsaTablePool implements Closeable {
     private final Configuration config;
     // null if use default factory
     private final HaeinsaTableIfaceFactory tableFactory;
+    private final Connection connection;
 
     /**
      * Default Constructor. Default HBaseConfiguration and no limit on pool
@@ -98,13 +101,15 @@ public class HaeinsaTablePool implements Closeable {
      * @param poolType pool type which is one of {@link PoolType#Reusable} or
      * {@link PoolType#ThreadLocal}
      */
+    @SneakyThrows(IOException.class)
     public HaeinsaTablePool(final Configuration config, final int maxSize,
                             final HaeinsaTableIfaceFactory tableFactory, PoolType poolType) {
         // Make a new configuration instance so I can safely cleanup when
         // done with the pool.
         this.config = config == null ? new Configuration() : config;
         this.maxSize = maxSize;
-        this.tableFactory = tableFactory == null ? new DefaultHaeinsaTableIfaceFactory(new HTableFactory()) : tableFactory;
+        this.connection = ConnectionFactory.createConnection(this.config);
+        this.tableFactory = tableFactory == null ? new DefaultHaeinsaTableIfaceFactory(connection) : tableFactory;
         if (poolType == null) {
             this.poolType = PoolType.Reusable;
         } else {
@@ -269,6 +274,7 @@ public class HaeinsaTablePool implements Closeable {
             closeTablePool(tableName);
         }
         this.tables.clear();
+        connection.close();
     }
 
     int getCurrentPoolSize(String tableName) {

@@ -15,58 +15,36 @@
  */
 package kr.co.vcnc.haeinsa;
 
-import static kr.co.vcnc.haeinsa.HaeinsaConstants.LOCK_FAMILY;
-import static kr.co.vcnc.haeinsa.HaeinsaConstants.LOCK_QUALIFIER;
-import static kr.co.vcnc.haeinsa.HaeinsaConstants.RECOVER_MAX_RETRY_COUNT;
-import static kr.co.vcnc.haeinsa.HaeinsaConstants.ROW_LOCK_VERSION;
-
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.NavigableMap;
-import java.util.NavigableSet;
-import java.util.Set;
-
-import javax.annotation.Nullable;
-
-import kr.co.vcnc.haeinsa.exception.ConflictException;
-import kr.co.vcnc.haeinsa.exception.NotExpiredYetException;
-import kr.co.vcnc.haeinsa.exception.RecoverableConflictException;
-import kr.co.vcnc.haeinsa.thrift.TRowLocks;
-import kr.co.vcnc.haeinsa.thrift.generated.TCellKey;
-import kr.co.vcnc.haeinsa.thrift.generated.TKeyValue;
-import kr.co.vcnc.haeinsa.thrift.generated.TMutation;
-import kr.co.vcnc.haeinsa.thrift.generated.TRowKey;
-import kr.co.vcnc.haeinsa.thrift.generated.TRowLock;
-import kr.co.vcnc.haeinsa.thrift.generated.TRowLockState;
-
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValue.Type;
-import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HTableInterface;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.filter.ColumnRangeFilter;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import kr.co.vcnc.haeinsa.exception.ConflictException;
+import kr.co.vcnc.haeinsa.exception.NotExpiredYetException;
+import kr.co.vcnc.haeinsa.exception.RecoverableConflictException;
+import kr.co.vcnc.haeinsa.thrift.TRowLocks;
+import kr.co.vcnc.haeinsa.thrift.generated.*;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValue.Type;
+import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.client.*;
+import org.apache.hadoop.hbase.filter.ColumnRangeFilter;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.annotation.Nullable;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.*;
+import java.util.Map.Entry;
+
+import static kr.co.vcnc.haeinsa.HaeinsaConstants.*;
 
 /**
  * Implementation of {@link HaeinsaTableIface}. It works with
@@ -74,15 +52,15 @@ import com.google.common.collect.Sets;
  */
 public class HaeinsaTable implements HaeinsaTableIfaceInternal {
     private static final Logger LOGGER = LoggerFactory.getLogger(HaeinsaTable.class);
-    private final HTableInterface table;
+    private final Table table;
 
-    public HaeinsaTable(HTableInterface table) {
+    public HaeinsaTable(Table table) {
         this.table = table;
     }
 
     @Override
     public byte[] getTableName() {
-        return table.getTableName();
+        return table.getName().getName();
     }
 
     @Override
@@ -123,7 +101,7 @@ public class HaeinsaTable implements HaeinsaTableIfaceInternal {
         }
 
         byte[] row = get.getRow();
-        HaeinsaTableTransaction tableState = tx.createOrGetTableState(this.table.getTableName());
+        HaeinsaTableTransaction tableState = tx.createOrGetTableState(this.table.getName().getName());
         HaeinsaRowTransaction rowState = tableState.getRowStates().get(row);
         boolean lockInclusive = false;
         Get hGet = new Get(get.getRow());
@@ -371,7 +349,7 @@ public class HaeinsaTable implements HaeinsaTableIfaceInternal {
         Preconditions.checkNotNull(put);
 
         byte[] row = put.getRow();
-        HaeinsaTableTransaction tableState = tx.createOrGetTableState(this.table.getTableName());
+        HaeinsaTableTransaction tableState = tx.createOrGetTableState(this.table.getName().getName());
         HaeinsaRowTransaction rowState = tableState.getRowStates().get(row);
         if (rowState == null) {
             // TODO(improvement) : Should consider to get lock when commit() called.
@@ -481,7 +459,7 @@ public class HaeinsaTable implements HaeinsaTableIfaceInternal {
         byte[] row = delete.getRow();
         // Can't delete entire row in Haeinsa because of lock column. Please specify column families when needed.
         Preconditions.checkArgument(delete.getFamilyMap().size() > 0, "can't delete an entire row.");
-        HaeinsaTableTransaction tableState = tx.createOrGetTableState(this.table.getTableName());
+        HaeinsaTableTransaction tableState = tx.createOrGetTableState(this.table.getName().getName());
         HaeinsaRowTransaction rowState = tableState.getRowStates().get(row);
         if (rowState == null) {
             // TODO(improvement) : Should consider to get lock when commit() called.
@@ -511,10 +489,10 @@ public class HaeinsaTable implements HaeinsaTableIfaceInternal {
         Put put = new Put(row);
         HaeinsaPut haeinsaPut = (HaeinsaPut) rowState.getMutations().remove(0);
         for (HaeinsaKeyValue kv : Iterables.concat(haeinsaPut.getFamilyMap().values())) {
-            put.add(kv.getFamily(), kv.getQualifier(), tx.getCommitTimestamp(), kv.getValue());
+            put.addColumn(kv.getFamily(), kv.getQualifier(), tx.getCommitTimestamp(), kv.getValue());
         }
         TRowLock newRowLock = new TRowLock(ROW_LOCK_VERSION, TRowLockState.STABLE, tx.getCommitTimestamp());
-        put.add(LOCK_FAMILY, LOCK_QUALIFIER, tx.getCommitTimestamp(), TRowLocks.serialize(newRowLock));
+        put.addColumn(LOCK_FAMILY, LOCK_QUALIFIER, tx.getCommitTimestamp(), TRowLocks.serialize(newRowLock));
 
         byte[] currentRowLockBytes = TRowLocks.serialize(rowState.getCurrent());
         if (!table.checkAndPut(row, LOCK_FAMILY, LOCK_QUALIFIER, currentRowLockBytes, put)) {
@@ -558,7 +536,7 @@ public class HaeinsaTable implements HaeinsaTableIfaceInternal {
             if (rowState.getMutations().get(0) instanceof HaeinsaPut) {
                 HaeinsaPut haeinsaPut = (HaeinsaPut) rowState.getMutations().remove(0);
                 for (HaeinsaKeyValue kv : Iterables.concat(haeinsaPut.getFamilyMap().values())) {
-                    put.add(kv.getFamily(), kv.getQualifier(), tx.getPrewriteTimestamp(), kv.getValue());
+                    put.addColumn(kv.getFamily(), kv.getQualifier(), tx.getPrewriteTimestamp(), kv.getValue());
                     TCellKey cellKey = new TCellKey();
                     cellKey.setFamily(kv.getFamily());
                     cellKey.setQualifier(kv.getQualifier());
@@ -591,7 +569,7 @@ public class HaeinsaTable implements HaeinsaTableIfaceInternal {
         newRowLock.setPrewritten(Lists.newArrayList(prewritten));
         newRowLock.setMutations(remaining);
         newRowLock.setExpiry(tx.getExpiry());
-        put.add(LOCK_FAMILY, LOCK_QUALIFIER, tx.getPrewriteTimestamp(), TRowLocks.serialize(newRowLock));
+        put.addColumn(LOCK_FAMILY, LOCK_QUALIFIER, tx.getPrewriteTimestamp(), TRowLocks.serialize(newRowLock));
 
         byte[] currentRowLockBytes = TRowLocks.serialize(rowState.getCurrent());
 
@@ -635,9 +613,9 @@ public class HaeinsaTable implements HaeinsaTableIfaceInternal {
                 // Maintain prewritten state and extend lock by ROW_LOCK_TIMEOUT
                 newRowLock.setExpiry(tx.getExpiry());
                 Put put = new Put(row);
-                put.add(LOCK_FAMILY, LOCK_QUALIFIER, newRowLock.getCurrentTimestamp(), TRowLocks.serialize(newRowLock));
+                put.addColumn(LOCK_FAMILY, LOCK_QUALIFIER, newRowLock.getCurrentTimestamp(), TRowLocks.serialize(newRowLock));
                 for (TKeyValue kv : mutation.getPut().getValues()) {
-                    put.add(kv.getKey().getFamily(), kv.getKey().getQualifier(), newRowLock.getCurrentTimestamp(), kv.getValue());
+                    put.addColumn(kv.getKey().getFamily(), kv.getKey().getQualifier(), newRowLock.getCurrentTimestamp(), kv.getValue());
                 }
                 if (!table.checkAndPut(row, LOCK_FAMILY, LOCK_QUALIFIER, currentRowLockBytes, put)) {
                     // Consider as conflict because another transaction might acquire lock of this row.
@@ -652,12 +630,12 @@ public class HaeinsaTable implements HaeinsaTableIfaceInternal {
                 if (mutation.getRemove().getRemoveFamiliesSize() > 0) {
                     for (ByteBuffer removeFamily : mutation.getRemove().getRemoveFamilies()) {
                         byte[] wrapper = ByteBufferUtils.getByteArray(removeFamily);
-                        delete.deleteFamily(wrapper, mutationTimestamp);
+                        delete.addFamily(wrapper, mutationTimestamp);
                     }
                 }
                 if (mutation.getRemove().getRemoveCellsSize() > 0) {
                     for (TCellKey removeCell : mutation.getRemove().getRemoveCells()) {
-                        delete.deleteColumns(removeCell.getFamily(), removeCell.getQualifier(), mutationTimestamp);
+                        delete.addColumns(removeCell.getFamily(), removeCell.getQualifier(), mutationTimestamp);
                     }
                 }
                 if (!table.checkAndDelete(row, LOCK_FAMILY, LOCK_QUALIFIER, currentRowLockBytes, delete)) {
@@ -681,7 +659,7 @@ public class HaeinsaTable implements HaeinsaTableIfaceInternal {
         TRowLock newRowLock = new TRowLock(ROW_LOCK_VERSION, TRowLockState.STABLE, commitTimestamp);
         byte[] newRowLockBytes = TRowLocks.serialize(newRowLock);
         Put put = new Put(row);
-        put.add(LOCK_FAMILY, LOCK_QUALIFIER, commitTimestamp, newRowLockBytes);
+        put.addColumn(LOCK_FAMILY, LOCK_QUALIFIER, commitTimestamp, newRowLockBytes);
 
         if (!table.checkAndPut(row, LOCK_FAMILY, LOCK_QUALIFIER, currentRowLockBytes, put)) {
             // Consider as success because another transaction might already stabilize this row.
@@ -710,7 +688,7 @@ public class HaeinsaTable implements HaeinsaTableIfaceInternal {
 
         byte[] newRowLockBytes = TRowLocks.serialize(newRowLock);
         Put put = new Put(row);
-        put.add(LOCK_FAMILY, LOCK_QUALIFIER, newRowLock.getCurrentTimestamp(), newRowLockBytes);
+        put.addColumn(LOCK_FAMILY, LOCK_QUALIFIER, newRowLock.getCurrentTimestamp(), newRowLockBytes);
 
         if (!table.checkAndPut(row, LOCK_FAMILY, LOCK_QUALIFIER, currentRowLockBytes, put)) {
             // We don't need abort current transaction. Because the transaction is already aborted.
@@ -751,7 +729,7 @@ public class HaeinsaTable implements HaeinsaTableIfaceInternal {
 
         byte[] newRowLockBytes = TRowLocks.serialize(newRowLock);
         Put put = new Put(row);
-        put.add(LOCK_FAMILY, LOCK_QUALIFIER, newRowLock.getCurrentTimestamp(), newRowLockBytes);
+        put.addColumn(LOCK_FAMILY, LOCK_QUALIFIER, newRowLock.getCurrentTimestamp(), newRowLockBytes);
 
         if (!table.checkAndPut(row, LOCK_FAMILY, LOCK_QUALIFIER, currentRowLockBytes, put)) {
             // Consider as conflict because another transaction might acquire lock of primary row.
@@ -772,7 +750,7 @@ public class HaeinsaTable implements HaeinsaTableIfaceInternal {
                 rowTxState.getCurrent().getPrewriteTimestamp() : rowTxState.getCurrent().getCurrentTimestamp();
         Delete delete = new Delete(row);
         for (TCellKey cellKey : rowTxState.getCurrent().getPrewritten()) {
-            delete.deleteColumn(cellKey.getFamily(), cellKey.getQualifier(), prewriteTimestamp);
+            delete.addColumn(cellKey.getFamily(), cellKey.getQualifier(), prewriteTimestamp);
         }
         if (!table.checkAndDelete(row, LOCK_FAMILY, LOCK_QUALIFIER, currentRowLockBytes, delete)) {
             // Consider as conflict because another transaction might acquire lock of this row.
@@ -780,7 +758,7 @@ public class HaeinsaTable implements HaeinsaTableIfaceInternal {
         }
     }
 
-    protected HTableInterface getHTable() {
+    protected Table getHTable() {
         return table;
     }
 
@@ -1209,7 +1187,7 @@ public class HaeinsaTable implements HaeinsaTableIfaceInternal {
                 }
                 // First scan or next() was called last time so move
                 // resultIndex.
-                current = new HaeinsaKeyValue(currentResult.raw()[resultIndex]);
+                current = new HaeinsaKeyValue(KeyValueUtil.ensureKeyValue(currentResult.rawCells()[resultIndex]));
                 resultIndex++;
 
                 return current;
@@ -1309,7 +1287,7 @@ public class HaeinsaTable implements HaeinsaTableIfaceInternal {
             if (result == null) {
                 return null;
             }
-            current = new HaeinsaKeyValue(result.list().get(resultIndex));
+            current = new HaeinsaKeyValue(KeyValueUtil.ensureKeyValue(result.listCells().get(resultIndex)));
             resultIndex++;
             return current;
         }

@@ -23,11 +23,11 @@ import javax.annotation.Nullable;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.client.HTableInterface;
+import org.apache.hadoop.hbase.client.Table;
 
 /**
  * Wrapper of HTableInterface for Haeinsa. Some of methods in
- * {@link HTableInterface} are dropped because of implementing complexity. Most
+ * {@link Table} are dropped because of implementing complexity. Most
  * of methods which directly access to DB now need {@link HaeinsaTransaction} as
  * an argument which supervises transaction.
  * <p>

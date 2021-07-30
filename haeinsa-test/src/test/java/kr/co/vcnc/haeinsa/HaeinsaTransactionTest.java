@@ -22,7 +22,7 @@ import kr.co.vcnc.haeinsa.thrift.generated.TRowLock;
 import kr.co.vcnc.haeinsa.thrift.generated.TRowLockState;
 
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HTableInterface;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.testng.Assert;
@@ -93,7 +93,7 @@ public class HaeinsaTransactionTest extends HaeinsaTestBase {
     public void testTimeout() throws Exception {
         final HaeinsaTransactionManager tm = context().getTransactionManager();
         final HaeinsaTableIface table = context().getHaeinsaTableIface("test");
-        final HTableInterface htable = context().getHTableInterface("test");
+        final Table htable = context().getTable("test");
         final HaeinsaTableIfaceInternal interalTable = (HaeinsaTableIfaceInternal) table;
 
         // Tests created, timeout and expiry fields

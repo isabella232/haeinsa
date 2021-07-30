@@ -21,7 +21,7 @@ import kr.co.vcnc.haeinsa.thrift.generated.TRowLock;
 import kr.co.vcnc.haeinsa.thrift.generated.TRowLockState;
 
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HTableInterface;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -39,7 +39,7 @@ public class Haeinsa67BugTest extends HaeinsaTestBase {
     public void testRecover() throws Exception {
         final HaeinsaTransactionManager tm = context().getTransactionManager();
         final HaeinsaTableIface testTable = context().getHaeinsaTableIface("test");
-        final HTableInterface hTestTable = context().getHTableInterface("test");
+        final Table hTestTable = context().getTable("test");
 
         {
             TRowKey primaryRowKey = new TRowKey().setTableName(testTable.getTableName()).setRow(Bytes.toBytes("Andrew"));
@@ -50,12 +50,12 @@ public class Haeinsa67BugTest extends HaeinsaTestBase {
                     .setExpiry(1380504160000L);
             primaryRowLock.addToSecondaries(secondaryRowKey);
             Put primaryPut = new Put(primaryRowKey.getRow());
-            primaryPut.add(HaeinsaConstants.LOCK_FAMILY, HaeinsaConstants.LOCK_QUALIFIER,
+            primaryPut.addColumn(HaeinsaConstants.LOCK_FAMILY, HaeinsaConstants.LOCK_QUALIFIER,
                     primaryRowLock.getCurrentTimestamp(), TRowLocks.serialize(primaryRowLock));
             hTestTable.put(primaryPut);
 
             Put secondaryPut = new Put(secondaryRowKey.getRow());
-            secondaryPut.add(HaeinsaConstants.LOCK_FAMILY, HaeinsaConstants.LOCK_QUALIFIER,
+            secondaryPut.addColumn(HaeinsaConstants.LOCK_FAMILY, HaeinsaConstants.LOCK_QUALIFIER,
                     secondaryRowLock.getCommitTimestamp(), TRowLocks.serialize(secondaryRowLock));
             hTestTable.put(secondaryPut);
 

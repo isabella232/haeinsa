@@ -23,7 +23,7 @@ import kr.co.vcnc.haeinsa.thrift.generated.TRowLock;
 import kr.co.vcnc.haeinsa.thrift.generated.TRowLockState;
 
 import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.HTableInterface;
+import org.apache.hadoop.hbase.client.Table;
 
 /*************************START NEUTRONIC ADDITION*****************
  * 1) Class package-private access modifier changed to public
@@ -141,7 +141,7 @@ public interface HaeinsaTableIfaceInternal extends HaeinsaTableIface {
      * Haeinsa can infer prewritten columns to clean up by parsing prewritten field in {@link TRowLock}.
      * Should remove column which have {@link TRowLock#currentTimestamp} as timestamp.
      * <p>
-     * Because Haeinsa uses {@link HTableInterface#checkAndDelete(byte[], byte[], byte[], byte[], Delete)} to delete prewrittens,
+     * Because Haeinsa uses {@link Table#checkAndDelete(byte[], byte[], byte[], byte[], Delete)} to delete prewrittens,
      * {@link TRowLock} is not changed. It will throw {@link ConflictException} if failed to acquire lock in checkAndDelete.
      *
      * @throws IOException ConflictException, HBase IOException.

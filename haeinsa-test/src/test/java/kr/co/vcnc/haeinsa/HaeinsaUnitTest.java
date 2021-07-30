@@ -32,7 +32,7 @@ import kr.co.vcnc.haeinsa.thrift.generated.TRowLock;
 import kr.co.vcnc.haeinsa.thrift.generated.TRowLockState;
 
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.client.HTableInterface;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.slf4j.Logger;
@@ -927,7 +927,7 @@ public class HaeinsaUnitTest extends HaeinsaTestBase {
     public void testHaeinsaTableWithoutTx() throws Exception {
         final HaeinsaTransactionManager tm = context().getTransactionManager();
         final HaeinsaTableIface testTable = context().getHaeinsaTableIface("test");
-        final HTableInterface hTestTable = context().getHTableInterface("test");
+        final Table hTestTable = context().getTable("test");
 
         /*
          * - beginTransaction
@@ -1069,7 +1069,7 @@ public class HaeinsaUnitTest extends HaeinsaTestBase {
     public void testDanglingRowLockException() throws Exception {
         final HaeinsaTransactionManager tm = context().getTransactionManager();
         final HaeinsaTableIface testTable = context().getHaeinsaTableIface("test");
-        final HTableInterface hTestTable = context().getHTableInterface("test");
+        final Table hTestTable = context().getTable("test");
 
         {
             TRowKey primaryRowKey = new TRowKey().setTableName(testTable.getTableName()).setRow(Bytes.toBytes("James"));
@@ -1080,7 +1080,7 @@ public class HaeinsaUnitTest extends HaeinsaTestBase {
                     .setPrimary(primaryRowKey);
 
             Put hPut = new Put(danglingRowKey.getRow());
-            hPut.add(HaeinsaConstants.LOCK_FAMILY, HaeinsaConstants.LOCK_QUALIFIER,
+            hPut.addColumn(HaeinsaConstants.LOCK_FAMILY, HaeinsaConstants.LOCK_QUALIFIER,
                     danglingRowLock.getCurrentTimestamp(), TRowLocks.serialize(danglingRowLock));
             hTestTable.put(hPut);
 
@@ -1106,12 +1106,12 @@ public class HaeinsaUnitTest extends HaeinsaTestBase {
                     .setPrimary(primaryRowKey);
 
             Put hPut = new Put(danglingRowKey.getRow());
-            hPut.add(HaeinsaConstants.LOCK_FAMILY, HaeinsaConstants.LOCK_QUALIFIER,
+            hPut.addColumn(HaeinsaConstants.LOCK_FAMILY, HaeinsaConstants.LOCK_QUALIFIER,
                     danglingRowLock.getCurrentTimestamp(), TRowLocks.serialize(danglingRowLock));
             hTestTable.put(hPut);
 
             hPut = new Put(primaryRowKey.getRow());
-            hPut.add(HaeinsaConstants.LOCK_FAMILY, HaeinsaConstants.LOCK_QUALIFIER,
+            hPut.addColumn(HaeinsaConstants.LOCK_FAMILY, HaeinsaConstants.LOCK_QUALIFIER,
                     primaryRowLock.getCommitTimestamp(), TRowLocks.serialize(primaryRowLock));
             hTestTable.put(hPut);
 
@@ -1151,7 +1151,7 @@ public class HaeinsaUnitTest extends HaeinsaTestBase {
             Assert.assertEquals(getList(testTable, tx, "b", "c", reversed).size(), 0);
             tx.commit();
 
-            HTableInterface hTable = context().getHTableInterface("test");
+            Table hTable = context().getTable("test");
             htablePut(hTable, "a-0", "data", "phoneNumber", "");
             htablePut(hTable, "b-0", "data", "phoneNumber", "");
             htablePut(hTable, "b-1", "data", "phoneNumber", "");
@@ -1240,9 +1240,9 @@ public class HaeinsaUnitTest extends HaeinsaTestBase {
         table.put(tx, put);
     }
 
-    private void htablePut(HTableInterface htable, String id, String family, String qualifier, String value) throws IOException {
+    private void htablePut(Table htable, String id, String family, String qualifier, String value) throws IOException {
         Put put = new Put(Bytes.toBytes(id));
-        put.add(Bytes.toBytes(family), Bytes.toBytes(qualifier), Bytes.toBytes(value));
+        put.addColumn(Bytes.toBytes(family), Bytes.toBytes(qualifier), Bytes.toBytes(value));
         htable.put(put);
     }
 

@@ -15,24 +15,25 @@
  */
 package kr.co.vcnc.haeinsa;
 
-import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.client.HTableInterfaceFactory;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Connection;
+
+import java.io.IOException;
 
 /**
  * Default HaeinsaTableIfaceFactory
  */
 public class DefaultHaeinsaTableIfaceFactory implements HaeinsaTableIfaceFactory {
-    private final HTableInterfaceFactory tableInterfaceFactory;
-
-    public DefaultHaeinsaTableIfaceFactory(HTableInterfaceFactory tableInterfaceFactory) {
-        this.tableInterfaceFactory = tableInterfaceFactory;
+    private final Connection connection;
+    public DefaultHaeinsaTableIfaceFactory(Connection connection) {
+        this.connection = connection;
     }
 
+    @lombok.SneakyThrows(IOException.class)
     @Override
     public HaeinsaTableIface createHaeinsaTableIface(Configuration config, byte[] tableName) {
-        return new HaeinsaTable(tableInterfaceFactory.createHTableInterface(config, tableName));
+        return new HaeinsaTable(connection.getTable(TableName.valueOf(tableName)));
     }
 
     @Override

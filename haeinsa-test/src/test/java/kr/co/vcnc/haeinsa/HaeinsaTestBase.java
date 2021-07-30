@@ -15,15 +15,14 @@
  */
 package kr.co.vcnc.haeinsa;
 
-import java.lang.reflect.Method;
-
-import org.apache.hadoop.hbase.client.HTableInterface;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.hsqldb.TransactionManager;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
+
+import java.lang.reflect.Method;
 
 /**
  * Basic test class for Haeinsa unit tests.
@@ -67,8 +66,8 @@ public class HaeinsaTestBase {
     }
 
     /**
-     * Context of current test. You can create {@link HTableInterface} and {@link HaeinsaTableIface}
-     * with this class. You can also get instance of {@link TransactionManager} with
+     * Context of current test. You can create {@link Table} and {@link HaeinsaTableIface}
+     * with this class. You can also get instance of {@link Table} with
      * {@link #getTransactionManager()}.
      */
     public static final class TestingContext {
@@ -132,14 +131,14 @@ public class HaeinsaTestBase {
         }
 
         /**
-         * Create {@link HTableInterface} with table name.
+         * Create {@link Table} with table name.
          * The name of the table will be created with {@link #createContextedTableName(String)}.
          *
          * @param tableName table name of the HTable
-         * @return instance of {@link HTableInterface}
+         * @return instance of {@link Table}
          * @throws Exception if there is a problem instantiating the HTable
          */
-        public HTableInterface getHTableInterface(String tableName) throws Exception {
+        public Table getTable(String tableName) throws Exception {
             return getCluster().getHbaseTable(createContextedTableName(tableName));
         }
 

@@ -19,7 +19,7 @@ import static kr.co.vcnc.haeinsa.TestingUtility.checkLockExist;
 
 import java.util.Iterator;
 
-import org.apache.hadoop.hbase.client.HTableInterface;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.testng.Assert;
@@ -40,13 +40,13 @@ public class HBaseMigrationTest extends HaeinsaTestBase {
     public void testMigrationByGet() throws Exception {
         final HaeinsaTransactionManager tm = context().getTransactionManager();
         final HaeinsaTableIface testTable = context().getHaeinsaTableIface("test");
-        final HTableInterface hTestTable = context().getHTableInterface("test");
+        final Table hTestTable = context().getTable("test");
 
         // Put sample data to HBase cluster by primitive HBase operation.
         // Lock will not created because it is just a primitive HBase operation.
         {
             Put put = new Put(Bytes.toBytes("row1"));
-            put.add(Bytes.toBytes("data"), Bytes.toBytes("col1"), Bytes.toBytes("value1"));
+            put.addColumn(Bytes.toBytes("data"), Bytes.toBytes("col1"), Bytes.toBytes("value1"));
             hTestTable.put(put);
             Assert.assertFalse(checkLockExist(hTestTable, Bytes.toBytes("row1")));
         }
@@ -75,13 +75,13 @@ public class HBaseMigrationTest extends HaeinsaTestBase {
     public void testMigrationByPut() throws Exception {
         final HaeinsaTransactionManager tm = context().getTransactionManager();
         final HaeinsaTableIface testTable = context().getHaeinsaTableIface("test");
-        final HTableInterface hTestTable = context().getHTableInterface("test");
+        final Table hTestTable = context().getTable("test");
 
         // Put sample data to HBase cluster by primitive HBase operation.
         // Lock will not created because it is just a primitive HBase operation.
         {
             Put put = new Put(Bytes.toBytes("row1"));
-            put.add(Bytes.toBytes("data"), Bytes.toBytes("col1"), Bytes.toBytes("value1"));
+            put.addColumn(Bytes.toBytes("data"), Bytes.toBytes("col1"), Bytes.toBytes("value1"));
             hTestTable.put(put);
             Assert.assertFalse(checkLockExist(hTestTable, Bytes.toBytes("row1")));
         }
@@ -119,13 +119,13 @@ public class HBaseMigrationTest extends HaeinsaTestBase {
     public void testMigrationByDelete() throws Exception {
         final HaeinsaTransactionManager tm = context().getTransactionManager();
         final HaeinsaTableIface testTable = context().getHaeinsaTableIface("test");
-        final HTableInterface hTestTable = context().getHTableInterface("test");
+        final Table hTestTable = context().getTable("test");
 
         // Put sample data to HBase cluster by primitive HBase operation.
         // Lock will not created because it is just a primitive HBase operation.
         {
             Put put = new Put(Bytes.toBytes("row1"));
-            put.add(Bytes.toBytes("data"), Bytes.toBytes("col1"), Bytes.toBytes("value1"));
+            put.addColumn(Bytes.toBytes("data"), Bytes.toBytes("col1"), Bytes.toBytes("value1"));
             hTestTable.put(put);
             Assert.assertFalse(checkLockExist(hTestTable, Bytes.toBytes("row1")));
         }
@@ -164,23 +164,23 @@ public class HBaseMigrationTest extends HaeinsaTestBase {
     public void testMigrationByInterRowScan() throws Exception {
         final HaeinsaTransactionManager tm = context().getTransactionManager();
         final HaeinsaTableIface testTable = context().getHaeinsaTableIface("test");
-        final HTableInterface hTestTable = context().getHTableInterface("test");
+        final Table hTestTable = context().getTable("test");
 
         // Put sample data to HBase cluster by primitive HBase operation.
         // Lock will not created because it is just a primitive HBase operation.
         {
             Put put1 = new Put(Bytes.toBytes("row1"));
-            put1.add(Bytes.toBytes("data"), Bytes.toBytes("col1"), Bytes.toBytes("value1"));
+            put1.addColumn(Bytes.toBytes("data"), Bytes.toBytes("col1"), Bytes.toBytes("value1"));
             hTestTable.put(put1);
             Assert.assertFalse(checkLockExist(hTestTable, Bytes.toBytes("row1")));
 
             Put put2 = new Put(Bytes.toBytes("row2"));
-            put2.add(Bytes.toBytes("data"), Bytes.toBytes("col2"), Bytes.toBytes("value2"));
+            put2.addColumn(Bytes.toBytes("data"), Bytes.toBytes("col2"), Bytes.toBytes("value2"));
             hTestTable.put(put2);
             Assert.assertFalse(checkLockExist(hTestTable, Bytes.toBytes("row2")));
 
             Put put3 = new Put(Bytes.toBytes("row3"));
-            put3.add(Bytes.toBytes("data"), Bytes.toBytes("col3"), Bytes.toBytes("value3"));
+            put3.addColumn(Bytes.toBytes("data"), Bytes.toBytes("col3"), Bytes.toBytes("value3"));
             hTestTable.put(put3);
             Assert.assertFalse(checkLockExist(hTestTable, Bytes.toBytes("row3")));
         }
@@ -239,15 +239,15 @@ public class HBaseMigrationTest extends HaeinsaTestBase {
     public void testMigrationByIntraRowScan() throws Exception {
         final HaeinsaTransactionManager tm = context().getTransactionManager();
         final HaeinsaTableIface testTable = context().getHaeinsaTableIface("test");
-        final HTableInterface hTestTable = context().getHTableInterface("test");
+        final Table hTestTable = context().getTable("test");
 
         // Put sample data to HBase cluster by primitive HBase operation.
         // Lock will not created because it is just a primitive HBase operation.
         {
             Put put = new Put(Bytes.toBytes("row1"));
-            put.add(Bytes.toBytes("data"), Bytes.toBytes("col1-1"), Bytes.toBytes("value1"));
-            put.add(Bytes.toBytes("data"), Bytes.toBytes("col1-2"), Bytes.toBytes("value2"));
-            put.add(Bytes.toBytes("data"), Bytes.toBytes("col1-3"), Bytes.toBytes("value3"));
+            put.addColumn(Bytes.toBytes("data"), Bytes.toBytes("col1-1"), Bytes.toBytes("value1"));
+            put.addColumn(Bytes.toBytes("data"), Bytes.toBytes("col1-2"), Bytes.toBytes("value2"));
+            put.addColumn(Bytes.toBytes("data"), Bytes.toBytes("col1-3"), Bytes.toBytes("value3"));
             hTestTable.put(put);
             Assert.assertFalse(checkLockExist(hTestTable, Bytes.toBytes("row1")));
         }
@@ -307,14 +307,14 @@ public class HBaseMigrationTest extends HaeinsaTestBase {
     public void testMigrationByMixedPutAndGet() throws Exception {
         final HaeinsaTransactionManager tm = context().getTransactionManager();
         final HaeinsaTableIface testTable = context().getHaeinsaTableIface("test");
-        final HTableInterface hTestTable = context().getHTableInterface("test");
+        final Table hTestTable = context().getTable("test");
 
         // Put sample data to HBase cluster by primitive HBase operation.
         // Lock will not created because it is just a primitive HBase operation.
         // Row1 is for HaeinsaGet Row2 is for HaeinsaPut.
         {
             Put put = new Put(Bytes.toBytes("row1"));
-            put.add(Bytes.toBytes("data"), Bytes.toBytes("col1"), Bytes.toBytes("value1"));
+            put.addColumn(Bytes.toBytes("data"), Bytes.toBytes("col1"), Bytes.toBytes("value1"));
             hTestTable.put(put);
             Assert.assertFalse(checkLockExist(hTestTable, Bytes.toBytes("row1")));
             Assert.assertFalse(checkLockExist(hTestTable, Bytes.toBytes("row2")));
@@ -371,17 +371,17 @@ public class HBaseMigrationTest extends HaeinsaTestBase {
     public void testMigrationByMixedPutAndDelete() throws Exception {
         final HaeinsaTransactionManager tm = context().getTransactionManager();
         final HaeinsaTableIface testTable = context().getHaeinsaTableIface("test");
-        final HTableInterface hTestTable = context().getHTableInterface("test");
+        final Table hTestTable = context().getTable("test");
 
         // Put sample data to HBase cluster by primitive HBase operation.
         // Lock will not created because it is just a primitive HBase operation.
         {
             Put put1 = new Put(Bytes.toBytes("row1"));
-            put1.add(Bytes.toBytes("data"), Bytes.toBytes("col1"), Bytes.toBytes("value1"));
+            put1.addColumn(Bytes.toBytes("data"), Bytes.toBytes("col1"), Bytes.toBytes("value1"));
             hTestTable.put(put1);
 
             Put put2 = new Put(Bytes.toBytes("row2"));
-            put2.add(Bytes.toBytes("data"), Bytes.toBytes("col2"), Bytes.toBytes("value2"));
+            put2.addColumn(Bytes.toBytes("data"), Bytes.toBytes("col2"), Bytes.toBytes("value2"));
             hTestTable.put(put2);
 
             Assert.assertFalse(checkLockExist(hTestTable, Bytes.toBytes("row1")));
@@ -438,7 +438,7 @@ public class HBaseMigrationTest extends HaeinsaTestBase {
     public void testMigrationByMixedInterRowScanAndPut() throws Exception {
         final HaeinsaTransactionManager tm = context().getTransactionManager();
         final HaeinsaTableIface testTable = context().getHaeinsaTableIface("test");
-        final HTableInterface hTestTable = context().getHTableInterface("test");
+        final Table hTestTable = context().getTable("test");
 
         // Put sample data to HBase cluster by primitive HBase operation.
         // Lock will not created because it is just a primitive HBase operation.
@@ -446,17 +446,17 @@ public class HBaseMigrationTest extends HaeinsaTestBase {
             Put put = null;
 
             put = new Put(Bytes.toBytes("row1"));
-            put.add(Bytes.toBytes("data"), Bytes.toBytes("col1"), Bytes.toBytes("value1"));
+            put.addColumn(Bytes.toBytes("data"), Bytes.toBytes("col1"), Bytes.toBytes("value1"));
             hTestTable.put(put);
             Assert.assertFalse(checkLockExist(hTestTable, Bytes.toBytes("row1")));
 
             put = new Put(Bytes.toBytes("row2"));
-            put.add(Bytes.toBytes("data"), Bytes.toBytes("col2"), Bytes.toBytes("value2"));
+            put.addColumn(Bytes.toBytes("data"), Bytes.toBytes("col2"), Bytes.toBytes("value2"));
             hTestTable.put(put);
             Assert.assertFalse(checkLockExist(hTestTable, Bytes.toBytes("row2")));
 
             put = new Put(Bytes.toBytes("row3"));
-            put.add(Bytes.toBytes("data"), Bytes.toBytes("col3"), Bytes.toBytes("value3"));
+            put.addColumn(Bytes.toBytes("data"), Bytes.toBytes("col3"), Bytes.toBytes("value3"));
             hTestTable.put(put);
             Assert.assertFalse(checkLockExist(hTestTable, Bytes.toBytes("row3")));
         }
@@ -523,15 +523,15 @@ public class HBaseMigrationTest extends HaeinsaTestBase {
     public void testMigrationByMixedIntraRowScanAndPut() throws Exception {
         final HaeinsaTransactionManager tm = context().getTransactionManager();
         final HaeinsaTableIface testTable = context().getHaeinsaTableIface("test");
-        final HTableInterface hTestTable = context().getHTableInterface("test");
+        final Table hTestTable = context().getTable("test");
 
         // Put sample data to HBase cluster by primitive HBase operation.
         // Lock will not created because it is just a primitive HBase operation.
         {
             Put put = new Put(Bytes.toBytes("row1"));
-            put.add(Bytes.toBytes("data"), Bytes.toBytes("col1-1"), Bytes.toBytes("value1"));
-            put.add(Bytes.toBytes("data"), Bytes.toBytes("col1-2"), Bytes.toBytes("value2"));
-            put.add(Bytes.toBytes("data"), Bytes.toBytes("col1-3"), Bytes.toBytes("value3"));
+            put.addColumn(Bytes.toBytes("data"), Bytes.toBytes("col1-1"), Bytes.toBytes("value1"));
+            put.addColumn(Bytes.toBytes("data"), Bytes.toBytes("col1-2"), Bytes.toBytes("value2"));
+            put.addColumn(Bytes.toBytes("data"), Bytes.toBytes("col1-3"), Bytes.toBytes("value3"));
             hTestTable.put(put);
             Assert.assertFalse(checkLockExist(hTestTable, Bytes.toBytes("row1")));
         }

@@ -19,6 +19,7 @@ import java.util.Comparator;
 
 import kr.co.vcnc.haeinsa.utils.NullableComparator;
 
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -75,8 +76,8 @@ public class HaeinsaKeyValue {
     }
 
     public HaeinsaKeyValue(KeyValue keyValue) {
-        this(keyValue.getRow(), keyValue.getFamily(), keyValue.getQualifier(), keyValue.getValue(),
-                KeyValue.Type.codeToType(keyValue.getType()));
+        this(CellUtil.cloneRow(keyValue), CellUtil.cloneFamily(keyValue), CellUtil.cloneQualifier(keyValue), CellUtil.cloneValue(keyValue),
+                KeyValue.Type.codeToType(keyValue.getType().getCode()));
     }
 
     public HaeinsaKeyValue(byte[] row, byte[] family, byte[] qualifier, byte[] value, Type type) {
